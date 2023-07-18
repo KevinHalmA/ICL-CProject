@@ -1,0 +1,134 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\date{June 9, 2023}
+
+\title{C Final Report}
+\author{Group 3}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\centering
+Report on our C project: ARMv8 AArch64 assembler and emulator, assembly program for blinking a Raspberry Pi and implementation of a typing speed test as an extension.
+\end{abstract}
+
+\section{Introduction}
+
+Our group has worked on implementing an ARMv8 AArch64 emulator to execute binary machine code, an assembler to translate assembly language into machine code, an assembly program to cause the green LED on a Raspberry Pi 3 Model B to blink and, as an extension, a C-based typing speed test using the GTK widget toolkit.
+
+\section{Part II: Assembler}
+
+\subsection{Structure}
+
+When designing our two pass assembler, we decided to re-use the internal instruction representation we originally defined for our emulator in 'instructions.h', in order to maintain the modular structure of our codebase and to separate the assembly process into distinct stages (tokenisation, parsing and encoding), which could be divided up amongst the group members and individually tested. As a result, we did a major refactor of our project structure before beginning work on the assembler, creating /assemble\_ and /emulate\_  directories to store our assembler and emulator files respectively, as well as a /common directory for the shared instructions.h, utilities.c and utilities.h files. We also made significant improvements to our Makefile (Figure 1) in order to handle these extra directories and to automatically generate .d files containing the include dependencies.
+
+\begin{figure}
+\begin{minipage}{.4\textwidth}
+    \subfloat{\includegraphics[scale=0.2]{Old Makefile.png}}
+\end{minipage}
+\hfill    
+\begin{minipage}{.4\textwidth}
+    \subfloat{\includegraphics[scale=0.2]{New Makefile.png}}
+\end{minipage}
+    \caption{Left = the old Makefile; Right = the updated Makefile}
+\end{figure}
+
+Much like the emulator, the main entry point to the assembler program is via assemble.c, which handles the reading of the assembly .s file, the initialisation of the symbol table (using data structures and helper functions defined in symbol\_table.c), and the execution of the 1st and 2nd passes of the assembler, returning EXIT\_FAILURE if an error occurs at any point during runtime.
+assembler.c implements the 1st and 2nd passes over the assembly code; the first\_pass() function scans the file line by line, adding any label definitions found, along with their corresponding memory address, to a given symbol table. The second\_pass() function reads the file line by line once again, this time ignoring any label definitions, and runs the main assembler pipeline. This is divided into 3 stages - tokenisation, parsing and encoding - which are handled by tokeniser.c, parser.c and encoder.c respectively.
+The tokenise() function splits the line using a set of delimiters into a dynamically allocated array of string tokens. This is then passed on to the parse() function, which parses the string tokens (using pointers to helper parse functions for each instruction type) into an internal representation of the instruction in the form of a struct, making use of the header file mnemonics.h to identify instruction mnemonics. Finally, this internal representation is passed to the encoder, which converts it into a binary number, and the assembler then writes this value to a supplied binary file. This loop continues until all assembly instructions have been converted into binary and written to the output file.
+
+\begin{figure}[h]
+\centering
+\includegraphics[scale=0.32]{Assembler Diagram.png}
+\caption{The include structure of our assembler}
+\end{figure}
+
+\subsection{Thoughts}
+
+We found the assembler to be much easier to implement and debug compared to the emulator, managing to complete it in a much shorter time frame, and a large portion of the code was reused from the emulator, along with much of the logic behind parsing and encoding (such as the use of function pointers and look-up tables to avoid long switch statements). This section was carried out efficiently and with few issues arising - we delegated tasks in a similar fashion to the emulator, with each person working on the parsing of the same instruction type they worked on in the emulator, given they would likely be the most knowledgeable of that particular instruction format.
+
+\section{Part III: Raspberry Pi}
+
+\subsection{Task}
+
+During this section we were required to write ARM64 assembly code to upload to the Raspberry Pi 3 Model B to cause its onboard green LED to blink indefinitely. We were able to achieve this successfully (despite being given the wrong model of the RPi), using qemu to emulate the Raspberry Pi (Figure 3). This allowed us to print out the register states to the terminal and track all Mailbox interactions in a log file, which aided in the difficult task of debugging.
+
+\begin{figure}
+\begin{minipage}{.4\textwidth}
+    \subfloat{\includegraphics[scale=0.2]{qemu log file.png}}
+\end{minipage}
+\hfill    
+\begin{minipage}{.4\textwidth}
+    \subfloat{\includegraphics[scale=0.2]{qemu registers.png}}
+\end{minipage}
+    \caption{Left = the qemu log file; Right = the qemu register states}
+\end{figure}
+
+
+\section{Part IV: Extension - Typing Speed Test}
+
+\subsection{Description}
+
+We decided on creating a typing test used to calculate their typing speed in correct words per minute. Any wrong words typed will not contribute to the correct words per minute, and will lower your accuracy.
+We believed the idea was simple but had potential to be taken further, so we decided to utilise GTK GUI package to create a rudimentary GUI for users, containing the typing test itself, a log in system where users can create an account and record their results which are then displayed on a leader board.
+Lastly we have a settings tab where a user can choose the text length, difficulty and even a random mode where there is not a regular text structure but instead a certain amount of random words for the user to type. The back end then calculates the amount of words typed correctly and keeps track of the time it took to type the entire text, using it to calculate the overall words per minute which is then outputted and added to the leader board automatically.
+
+Our code is split into two files - a file called filter.c and a file called extension.c. The filter.c file is used to filter a dictionary into three different word lengths and store them in separate files, which we use in our main code to provide different difficulty settings. We tried to keep all of our code for the typing test in one file to avoid messing with Makefiles as we ran into some time constraint issues. However, we have made our code as modular as possible, with many helper functions to separate out functionality. This was especially important as we were new to using gtk, and by breaking code out into helper functions, we made it easier to work with our code, and to debug when errors occurred. Within the main file, we have a main function which runs the window, which calls a function to activate all the widgets within the window. In our activation function, we have broken out the code for creating pages for each menu option. One notable feature of our code is the use of global variables for the dropdown boxes and word counts, which was used to access these important variables from different menu pages without having to pass widget pointers everywhere.
+
+Our first main challenge to overcome was the GUI. We found gtk documentation to be rare, but very good when we did find it. This greatly aided us in learning to use gtk, and helped us learn in time for the deadline. Time was definitely the enemy in the extension. Another challenge we faced was using the srand() function. We initially had called srand(time[NULL]) at the start of the getWord() function, however each time we called the function it would return the same word. We figured out this was a mistake as each srand() call would have the same seed as the time was identical since the code was being execute very quickly, hence we fixed it by generating srand() only once before calling getWords().
+
+For testing, we have a main function in each of the helper function files that when compiled with gcc runs the tests and prints the results to the terminal. For filter it outputted the short.txt, medium.txt and long.txt, and we can check those as intended. To test the type tester, we mainly made use of terminal outputs which were available to us through gtk. We also compiled and ran a new .exe file every time we made a change, just to make sure that everything worked as intended. We also made use of human testing - subjecting some friends to our program, to try and catch any bugs we may have missed.
+
+\section{Group Reflection}
+
+\subsection{Communication}
+
+Our group's communication remained fairly consistent throughout, organising 1-2 team meetings to discuss updates and progress a week, followed by our use of discord to ask questions, set up meetings, get help with code and sharing files and text. Occasionally we struggled with forgetting to explicitly update finishing a task or delegating part of a larger task to someone with less work. This, however, was on the rarer side and overall we ensured everyone was as up to date as possible at all times and we all had easy access to group work and fast responses to queries to the group.
+
+\subsection{Work Delegation}
+
+To be as fair and efficient as possible throughout the assembler and emulator our methodology for delegating tasks involved working together on skeleton code and main functionality and data representation, then splitting into each person doing one of the 4 types of instructions alongside any small utility or general functions everyone needed to use. As for the final stretch between the extension and raspberry pi, we divided into 2 pairs, with each pair working on one of the 2 tasks at a time. This way we worked on both simultaneously and each person got to work on both at some point maximizing our exposure to every part of the project. As for debugging, we believed it would be counter intuitive to try debugging all at the same time, as we may have overlaps for fixes, so often we all debugged together on one computer and would switch around who was coding and who would observe and try to catch any bugs.
+
+\subsection{Future Plans}
+
+Overall our team work has been quite good, with a main issue being with work delegation, where we did not split up the work as evenly as we would've liked leading to some doing more than others without realising. We also left too much work for the last week and didn't spread out the work as evenly over the time frame. Our ideas to solve this for future projects is being more proactive in starting work as soon as possible and having a realistic set target per week. A side note however is the biggest impact on our timing was the compulsory C exam which caused us to have to take a break from the project to revise and practice, putting a halt to our progress momentarily. With regards to the uneven workload, we should have spent more time together working out the difficulty of certain tasks to delegate equal quantities of tasks for each difficulty, or even reducing individual tasks and attempt to collaborate more on more than just the overall functionality.
+
+\section{Personal Reflections}
+
+\subsection{Andrei}
+
+Throughout the project I believe I contributed an average amount of work but to make up for it took care of a lot of the delegation, the reports and a lot of the admin, creating the discord, setting up all meetings and being the medium between the group and our mentor. On the code side I worked on a lot of the utilities and the data processing immediate instructions for both the emulator and assembler. I contributed little to the Raspberry Pi, focusing on making a start on the extension to ensure we get it done in the allotted time frame. My main weakness was a lot of meetings had to be planned around me and I had a lot less time to work on the project due to other commitments, meaning I may not have been as focused as the others.
+
+\subsection{Jiawen}
+
+I was responsible for much of the overall assembler and emulator functionality and logic, as well as most of the debugging (due to being able to get the test suite working locally on my laptop). I also was involved in the final refactoring and general clean up of code and comments, in order to ensure that our codebase followed a consistent style and maintained conciseness and clarity.
+Overall, I contributed a good portion to the coding side of the project, which I felt was both a strength and weakness, as there were occasions when I tended to take on too much at once instead of delegating tasks to my fellow team members.
+
+\subsection{Ruiqi}
+
+I had the hardest instruction to implement for the assembler and emulator, the data processing register instructions. This meant that I only focused on the instruction rather than helping with skeleton as well. I did a chunk of the Raspberry Pi section, figuring out our issue was the Raspberry Pi model we were given. I also worked extensively on the extension, figuring out how to get GTK installed. I should've been more involved with the debugging of the assembler and emulator and also could've been more consistent with my work output, having a week where I contributed very little due to certain circumstances.
+
+\subsection{Kevin}
+
+Working through the project I was assigned implementing the branch instruction during the emulator and worked on file handling for the assembler.  I undertook making the slides and the presentation scripts and worked on the skeleton for the assembly code for the Raspberry Pi. Retrospectively, I was given some of the easier tasks and didn't make an effort to undertake and get involved with more tasks and help out with some of the higher complexity tasks and debugging, due to assuming my tasks difficulties were similar to the rest of my teams. For future projects I need to be more proactive in understanding the project as a whole and helping out with tasks that I could've helped in despite not being assigned to.
+
+\section{Conclusion}
+
+Overall as a team we managed to complete the first 3 sections efficiently and got them to all work as intended, alongside taking a simple extension idea and improving on it to make a program that meets the spec and that allowed us to use C in ways we have not yet covered or seen. We are happy with our progression and have thoroughly enjoyed the project.
+
+\end{document}

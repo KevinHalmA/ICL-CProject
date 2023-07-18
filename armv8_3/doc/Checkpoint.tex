@@ -1,0 +1,141 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\date{June 9, 2023}
+
+\title{C Interim Checkpoint Report}
+\author{Group 3 \\ Andrei Braguta, Jiawen Li, Ruiqi Zhang, Kevin Halm Alvarez}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+Our group has worked on developing a C-based emulator for executing ARMv8
+AArch64 object code. This emulator operates in both 32-bit and 64-bit register
+modes, involving 2MB of byte-addressable memory and 31 general-purpose
+registers, alongside the zero register, program counter and processor state
+register. Our emulator reads in a binary file of object code and executes the
+main emulator pipeline by fetching, decoding and executing each instruction
+until the halt instruction is reached. Upon termination, it writes to an output
+file, detailing the final emulator state.
+
+\section{Group Organisation}
+
+\subsection{Work Distribution}
+
+To ensure effective collaboration within the group, we utilised a combination of
+pair programming and section delegation. Each of the four members was assigned a
+particular instruction type: data processing (immediate), data processing
+(register), single data transfer and branch. This allowed us to work
+independently on our allocated instruction types (with an exception due to an
+overlap between arithmetic operations in immediate and register instructions).
+When designing the general structure of our emulator, we collaborated closely as
+a team. Together, we defined and implemented data structures representing the
+CPU state and the various instruction types. This collaborative approach allowed
+us to make individual contributions while ensuring that we were all on the same
+page regarding the main emulator structure, and on the whole allowed for a
+shared understanding amongst all group members to make sure each member could
+carry out their assigned tasks.
+
+\subsection{Group Structure}
+
+To collaborate well within our group, we adopted a number of strategies.
+Firstly, we established a group chat where we could address any coding queries,
+provide Git updates, schedule online or in-person meetings, and share relevant
+files. This allowed for clear communication and streamlined our workflow. In
+terms of branch control, we created personal branches in the GitLab repo. This
+allowed each member to work on their respective implementations independently by
+committing and pushing to their own branch. Regularly merging these branches
+with the master branch helped us avoid conflicts and bugs in our code. This
+approach enabled us to maintain a steady progress rate and ensured that anyone
+facing difficulties or falling behind could quickly catch up with the rest of
+the group. These strategies allowed us to complete the emulator in our predicted
+time frame while also contributing equally and efficiently. Hence, we plan to
+keep our group structure as is for the rest of the project.
+
+\section{Emulator Implementation}
+
+\subsection{Emulator Structure}
+
+We have represented the emulator state using a struct named CPUState located in
+utilities.h. CPUState contains a pointer to memory (dynamically allocated on the
+heap), 31 general-purpose registers (stored in an array), the zero register, the
+program counter and PState (a struct containing booleans representing the 4
+condition flags). To represent the general structure of an instruction, we have
+created a struct named Instr - this contains an enum representing the
+instruction type and a union of structs representing the bit format of each
+individual instruction type. 
+
+The main entry point to our emulator program is via emulate.c, which handles the
+loading of the binary file into memory (via functions defined in
+binary\_loader.c), the initialisation and execution of the emulator, and the
+writing of the emulator state to a given .out file (via functions defined in
+emulator.c). emulator.c implements the execution pipeline of the emulator, with
+a fetch function that loads the next instruction from memory, and the main
+decode and execute functions, which delegate the actual decoding/execution of
+the instruction to functions for that particular instruction type. These
+specialised decode and execute functions are located in individual source files
+for each instruction type (along with dp\_arithmetic.c, which handles the
+arithmetic operations shared by immediate and register).
+
+Finally, we have defined utility functions for shifting, sign extending, etc in
+utilities.h and helper functions for reading/writing to memory and registers
+(using the appropriate bit mode) in memory.c and registers.c respectively.
+
+\subsection{Code Re-usability}
+
+To streamline our implementation of the assembler in Part 2, we intend to reuse
+several of the helper functions defined in utilities.c (eg: get\_bit\_mask), and
+in particular the internal instruction representation that we defined for the
+emulator in instructions.h. This will allow us to separate the assembly process
+into first parsing the assembly code into our internal representation of the
+instruction, and then converting it into binary object code, meaning that we can
+maintain a modular design for the assembler. As a result, we may need to
+refactor our src directory structure and Makefile, potentially by creating
+separate directories for the assembler and emulator and a common directory
+containing files shared between them.
+
+\section{Future Parts}
+
+\subsection{Challenges}
+
+As a group, we find Part 3 to be the most daunting task due to its debugging
+process. Constantly editing code, merging it, downloading it onto a USB, and
+attempting to boot the Raspberry Pi could prove to be quite tedious. Moreover,
+the fact that we only have one Raspberry Pi for testing means that debugging
+activities may require the presence of all group members. Part 4 may also
+present some challenges due to its open-ended nature; there is a possibility of
+either choosing a brief that is too simple, or getting carried away and
+attempting to accomplish something which may not be realistically achievable
+within the given time frame.
+
+\subsection{Implementation Strategies}
+
+In order to ensure a smooth execution of Part 3, we have implemented several
+initiatives. These include conducting bi-daily in-person debugging meetings,
+either in labs or at the accommodations of our group members. Additionally, we
+plan to create a dedicated branch specifically for this project section,
+ensuring that the correct version of our code is always downloaded and uploaded
+to our USB. We merge this branch to the master branch after verification.
+Moreover, to handle the complexities of different sections effectively, we
+intend to increase our utilisation of pair programming. Regarding Part 4, we are
+currently in the process of identifying a project idea that strikes a balance
+between difficulty and feasibility within the given time frame. Our focus is on
+generating a creative concept while maintaining good code style and hygiene,
+fully leveraging the capabilities of the C programming language.
+
+\section{Conclusion}
+
+Overall, we have approached the project with a combination of effective
+planning, delegation, and interesting implementations within different sections
+of the emulator. Our aim has been to showcase our proficiency in C programming
+and demonstrate strong teamwork throughout the project.
+
+\end{document}
